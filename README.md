@@ -16,7 +16,7 @@ $$\min_{\beta} \frac{1}{2n} \left\Vert y - X\beta \right\Vert_2^2 + \lambda \lef
 | **样本量 ($n$)** | 200 | 200 |
 | **特征数 ($p$)** | 50 | **1000** |
 | **条件** | Over-determined ($n > p$) | Under-determined ($p \gg n$) |
-| **最大迭代** | 100 | 250 |
+| **最大迭代** | 100 | 1000 |
 
 * **稀疏性设置**: 真实参数向量中仅前 50 个元素非零。
 * **正则化系数**: 0.1。
@@ -58,45 +58,39 @@ $$\min_{\beta} \frac{1}{2n} \left\Vert y - X\beta \right\Vert_2^2 + \lambda \lef
 
 ## 📊 场景一：低维情形分析 ($n=200, p=50$)
 
-![Low Dim Convergence](Figure_2.png)
-
-### ⚔️ 算法综合性能评测 (Three Dimensions Evaluation)
-
-我们将各算法从收敛机制、速度及适用场景三个维度进行详细横向评测：
-
+![Low Dim Convergence](Figure_1.png)
+⚔️ 算法综合性能评测 (Three Dimensions Evaluation)
 #### 1. 内部对比 (Internal Comparison)
 
-* **Huber 方法族比较**
-    * *收敛速度*: Accel+Restart ≈ Accel > 基础版本
-    * *稳定性*: Accel+Restart > 基础版本 ≈ Accel
-    * *结论*: 加速策略有效，但**无法克服 Huber 方法在 LASSO 问题中的根本局限性**（只能收敛到近似解）。
+* **ADMM 方法族比较**
+    * *收敛速度*: $rho=1$ > $rho=0.1$ > $rho=10$ 
+    * *稳定性*: $rho=1$ > $rho=0.1$ > $rho=10$
+    * *结论*: ADMM 参数的调整对算法的收敛性能有显著影响。参数 $rho=1$ 通常提供最佳的收敛速度和稳定性，而较大的 $rho$（如 $rho=10$）导致了过度惩罚和较慢的收敛。
 
-* **FISTA 变体对比**
-    * *收敛速度*: FISTA ≈ FISTA(Restart) [前期] > FISTA(Restart) [后期]
-    * *稳定性*: FISTA(Restart) **显著优于** FISTA
-    * *结论*: 重启策略用微小的速度代价换取了显著的稳定性提升，消除了“锯齿”。
+* **坐标下降法 (Coordinate Descent)**
+    * *收敛速度*: 极快，几乎垂直下降
+    * *稳定性*: 极高，几乎没有震荡
+    * *结论*: 在所有算法中，坐标下降法表现最为卓越，其收敛速度极快，稳定性也很好，适用于规模较小的 LASSO 问题。
 
-* **ADMM 参数敏感性**
-    * *性能排序*: $\rho=1$ > $\rho=2$ > $\rho=0.5$ > $\rho=5$
-    * *结论*: 参数的调整对算法的收敛性能非常重要。
+* **梯度下降法 (Gradient Descent) 和平滑版本 (Smooth)**
+    * *收敛速度*: 平稳下降，速度较慢
+    * *稳定性*: 受限于梯度下降的性质，平滑版本稍有改善，但仍不如坐标下降法
+    * *结论*: 虽然梯度下降法能够提供稳定的收敛，但由于收敛速度较慢，它并不适合大规模问题。
 
 #### 2. 算法横向对比 (Cross-Algorithm Comparison)
 
 * **收敛速度排名**:
-    1.  **Coordinate Descent** - 指数级快速收敛 
-    2.  **FISTA 系列** - 加速的线性收敛 
-    3.  **ADMM (调优后)** - 稳健的线性收敛 
-    4.  **Huber 系列** - 缓慢的线性收敛 
+    1.  **坐标下降法 (Coordinate Descent)** - 极其快速的收敛
+    2.  **ADMM (调优后)** - 稳健的线性收敛
+    3.  **梯度下降法** - 平缓收敛，速度较慢
 
 #### 3. 适用场景与稳定性 (Scenarios & Stability)
 
 | 算法 | 收敛速度 | 稳定性 | 参数敏感性 | 适用规模 | 实现复杂度 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Coordinate Descent** | ★★★★★ | ★★★★★ | ★★☆☆☆ | 中小型 | ★★★☆☆ |
-| **FISTA** | ★★★★☆ | ★★☆☆☆ | ★★☆☆☆ | 大中小型 | ★★★☆☆ |
-| **FISTA (Restart)** | ★★★★☆ | ★★★★★ | ★★☆☆☆ | 大中小型 | ★★★★☆ |
-| **ADMM (调优后)** | ★★★☆☆ | ★★★★☆ | ★★★★★ | 分布式/大规模 | ★★★★☆ |
-| **Huber 系列** | ★★☆☆☆ | ★★★☆☆ | ★★★☆☆ | 理论研究 | ★★☆☆☆ |
+| **坐标下降法 (Coordinate Descent)** | ★★★★★ | ★★★★★ | ★☆☆☆☆ | 小型 | ★★★☆☆ |
+| **梯度下降法 (Gradient Descent)** | ★★☆☆☆ | ★★★☆☆ | ★★★☆☆ | 中小型 | ★★☆☆☆ |
+| **ADMM (调优后)** | ★★★☆☆ | ★★★★☆ | ★★★★★ | 大规模/分布式 | ★★★★☆ |
 
 ---
 ---
@@ -105,7 +99,7 @@ $$\min_{\beta} \frac{1}{2n} \left\Vert y - X\beta \right\Vert_2^2 + \lambda \lef
 
 当特征维度急剧增加时 ($p \gg n$)，算法表现发生了显著变化。
 
-![High Dim Convergence](Figure_3.png)
+![High Dim Convergence](Figure_2.png)
 
 **核心分析：**
 
